@@ -12,6 +12,7 @@ import { Career } from './pages/Career';
 import { Chat } from './components/chat/Chat';
 import { Login } from './pages/Login';
 import { Register } from './pages/Register';
+import { EventDetails } from './pages/EventDetails';
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -37,6 +38,7 @@ function App() {
             <Route path="/career" element={<Career />} />
             <Route path="/login" element={<Login setIsAuthenticated={setIsAuthenticated} />} />
             <Route path="/register" element={<Register />} />
+            <Route path="/events/:id" element={<EventDetails />} />
           </Routes>
         </main>
         <Footer />

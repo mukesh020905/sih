@@ -124,9 +124,9 @@ export const Profile: React.FC = () => {
           github: data.github || '',
           twitter: data.twitter || '',
           skills: data.skills ? data.skills.join(', ') : '',
-          experience: data.experience ? JSON.stringify(data.experience, null, 2) : '',
-          education: data.education ? JSON.stringify(data.education, null, 2) : '',
-          projects: data.projects ? JSON.stringify(data.projects, null, 2) : '',
+          experience: data.experience ? data.experience.map(exp => `${exp.title} at ${exp.company}`).join('\n') : '',
+          education: data.education ? data.education.map(edu => `${edu.degree} in ${edu.fieldOfStudy}`).join('\n') : '',
+          projects: data.projects ? data.projects.map(proj => proj.title).join('\n') : '',
           certifications: data.certifications ? data.certifications.join(', ') : '',
           interests: data.interests ? data.interests.join(', ') : '',
         });
@@ -207,29 +207,6 @@ export const Profile: React.FC = () => {
 
       const parsedData: any = { ...data };
 
-      // Safely parse JSON strings for array of objects
-      try {
-        if (parsedData.experience) parsedData.experience = JSON.parse(parsedData.experience);
-      } catch (e) {
-        setError('Invalid JSON for Experience. Please check the format.');
-        setLoading(false);
-        return;
-      }
-      try {
-        if (parsedData.education) parsedData.education = JSON.parse(parsedData.education);
-      } catch (e) {
-        setError('Invalid JSON for Education. Please check the format.');
-        setLoading(false);
-        return;
-      }
-      try {
-        if (parsedData.projects) parsedData.projects = JSON.parse(parsedData.projects);
-      } catch (e) {
-        setError('Invalid JSON for Projects. Please check the format.');
-        setLoading(false);
-        return;
-      }
-
       const res = await fetch('http://localhost:5000/api/profile', {
         method: 'PUT',
         headers: {
@@ -256,6 +233,7 @@ export const Profile: React.FC = () => {
     }
   };
 
+
   if (loading && !userProfile) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -279,6 +257,31 @@ export const Profile: React.FC = () => {
       </div>
     );
   }
+
+  const formatDate = (dateString: string | undefined) => {
+    if (!dateString) return null;
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) {
+      return null;
+    }
+    return date.toLocaleDateString();
+  };
+
+  const formatDateRange = (from: string, to: string | undefined, current: boolean | undefined) => {
+    const fromDate = formatDate(from);
+    const toDate = current ? 'Present' : formatDate(to);
+
+    if (fromDate && toDate) {
+      return `${fromDate} - ${toDate}`;
+    }
+    if (fromDate) {
+      return fromDate;
+    }
+    if (toDate) {
+      return toDate;
+    }
+    return '';
+  };
 
   const profileImageUrl = userProfile.profilePicture 
     ? `http://localhost:5000${userProfile.profilePicture}` 
@@ -357,9 +360,9 @@ export const Profile: React.FC = () => {
                         github: userProfile.github || '',
                         twitter: userProfile.twitter || '',
                         skills: userProfile.skills ? userProfile.skills.join(', ') : '',
-                        experience: userProfile.experience ? JSON.stringify(userProfile.experience, null, 2) : '',
-                        education: userProfile.education ? JSON.stringify(userProfile.education, null, 2) : '',
-                        projects: userProfile.projects ? JSON.stringify(userProfile.projects, null, 2) : '',
+                        experience: userProfile.experience ? userProfile.experience.map(exp => `${exp.title} at ${exp.company}`).join('\n') : '',
+                        education: userProfile.education ? userProfile.education.map(edu => `${edu.degree} in ${edu.fieldOfStudy}`).join('\n') : '',
+                        projects: userProfile.projects ? userProfile.projects.map(proj => proj.title).join('\n') : '',
                         certifications: userProfile.certifications ? userProfile.certifications.join(', ') : '',
                         interests: userProfile.interests ? userProfile.interests.join(', ') : '',
                       });
@@ -565,26 +568,14 @@ export const Profile: React.FC = () => {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   <Briefcase className="h-4 w-4 inline mr-1" />
-                  Experience (JSON Array)
+                  Experience
                 </label>
                 {isEditing ? (
                   <textarea
                     {...register('experience')}
                     rows={8}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-sm"
-                    placeholder={
-                      `[
-  {
-    "title": "Software Engineer",
-    "company": "Tech Solutions Inc.",
-    "location": "New York, NY",
-    "from": "2020-01-01",
-    "to": "2023-12-31",
-    "current": false,
-    "description": "Developed and maintained web applications..."
-  }
-]`
-                    } 
+                    placeholder="Enter your experience"
                   />
                 ) : (
                   userProfile.experience && userProfile.experience.length > 0 ? (
@@ -592,7 +583,7 @@ export const Profile: React.FC = () => {
                       {userProfile.experience.map((exp, index) => (
                         <div key={index} className="border-l-4 border-blue-500 pl-4">
                           <h3 className="text-lg font-semibold text-gray-900">{exp.title} at {exp.company}</h3>
-                          <p className="text-gray-700 text-sm">{exp.location} | {new Date(exp.from).toLocaleDateString()} - {exp.current ? 'Present' : exp.to ? new Date(exp.to).toLocaleDateString() : 'N/A'}</p>
+                          <p className="text-gray-700 text-sm">{exp.location} {formatDateRange(exp.from, exp.to, exp.current)}</p>
                           {exp.description && <p className="text-gray-600 mt-1">{exp.description}</p>}
                         </div>
                       ))}
@@ -610,26 +601,14 @@ export const Profile: React.FC = () => {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   <BookOpen className="h-4 w-4 inline mr-1" />
-                  Education (JSON Array)
+                  Education
                 </label>
                 {isEditing ? (
                   <textarea
                     {...register('education')}
                     rows={8}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-sm"
-                    placeholder={
-                      `[
-  {
-    "degree": "Master of Science",
-    "institution": "University of Example",
-    "fieldOfStudy": "Computer Science",
-    "from": "2018-09-01",
-    "to": "2020-05-31",
-    "current": false,
-    "description": "Specialized in AI and Machine Learning."
-  }
-]`
-                    } 
+                    placeholder="Enter your education details"
                   />
                 ) : (
                   userProfile.education && userProfile.education.length > 0 ? (
@@ -637,7 +616,7 @@ export const Profile: React.FC = () => {
                       {userProfile.education.map((edu, index) => (
                         <div key={index} className="border-l-4 border-green-500 pl-4">
                           <h3 className="text-lg font-semibold text-gray-900">{edu.degree} in {edu.fieldOfStudy}</h3>
-                          <p className="text-gray-700 text-sm">{edu.institution} | {new Date(edu.from).toLocaleDateString()} - {edu.current ? 'Present' : edu.to ? new Date(edu.to).toLocaleDateString() : 'N/A'}</p>
+                          <p className="text-gray-700 text-sm">{edu.institution} {formatDateRange(edu.from, edu.to, edu.current)}</p>
                           {edu.description && <p className="text-gray-600 mt-1">{edu.description}</p>}
                         </div>
                       ))}
@@ -655,23 +634,14 @@ export const Profile: React.FC = () => {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   <Code className="h-4 w-4 inline mr-1" />
-                  Projects (JSON Array)
+                  Projects
                 </label>
                 {isEditing ? (
                   <textarea
                     {...register('projects')}
                     rows={8}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-sm"
-                    placeholder={
-                      `[
-  {
-    "title": "E-commerce Platform",
-    "description": "Developed a full-stack e-commerce platform using MERN stack.",
-    "projectUrl": "https://example.com/ecommerce",
-    "githubUrl": "https://github.com/user/ecommerce"
-  }
-]`
-                    } 
+                    placeholder="Enter your project details"
                   />
                 ) : (
                   userProfile.projects && userProfile.projects.length > 0 ? (

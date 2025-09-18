@@ -30,6 +30,9 @@ app.use('/api/auth', require('./routes/auth'));
 // Profile routes
 app.use('/api/profile', require('./routes/profile'));
 
+// Event routes
+app.use('/api/events', require('./routes/events'));
+
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

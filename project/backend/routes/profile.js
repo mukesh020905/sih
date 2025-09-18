@@ -81,16 +81,22 @@ router.put('/', auth, async (req, res) => {
     profileFields.interests = interests.split(',').map((interest) => interest.trim()).filter(i => i !== '');
   }
 
-  // For arrays of objects, assume they are sent as JSON arrays
-  // If the field is explicitly sent as an empty string or null, set it to an empty array
   if (experience !== undefined) {
-    profileFields.experience = experience === '' || experience === null ? [] : experience;
+    profileFields.experience = experience.split('\n').map(exp => {
+      const [title, company] = exp.split(' at ');
+      return { title, company };
+    });
   }
   if (education !== undefined) {
-    profileFields.education = education === '' || education === null ? [] : education;
+    profileFields.education = education.split('\n').map(edu => {
+      const [degree, fieldOfStudy] = edu.split(' in ');
+      return { degree, fieldOfStudy };
+    });
   }
   if (projects !== undefined) {
-    profileFields.projects = projects === '' || projects === null ? [] : projects;
+    profileFields.projects = projects.split('\n').map(proj => {
+      return { title: proj };
+    });
   }
 
   try {

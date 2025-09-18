@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Calendar, 
   MapPin, 
@@ -9,15 +9,17 @@ import {
   Plus,
   ExternalLink
 } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { CreateEventModal } from '../components/events/CreateEventModal';
 
 interface Event {
-  id: number;
+  _id: string;
   title: string;
   description: string;
   date: string;
   time: string;
   location: string;
-  attendees: number;
+  attendees: any[];
   maxAttendees: number;
   category: string;
   image: string;
@@ -26,66 +28,67 @@ interface Event {
 }
 
 export const Events: React.FC = () => {
+  const [events, setEvents] = useState<Event[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [viewMode, setViewMode] = useState<'upcoming' | 'past'>('upcoming');
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
-  const upcomingEvents: Event[] = [
-    {
-      id: 1,
-      title: 'Tech Innovation Summit 2025',
-      description: 'Join fellow alumni for discussions on the latest tech trends, AI developments, and startup opportunities.',
-      date: '2025-02-15',
-      time: '09:00 AM',
-      location: 'San Francisco Convention Center',
-      attendees: 127,
-      maxAttendees: 200,
-      category: 'Professional',
-      image: 'https://images.pexels.com/photos/1181396/pexels-photo-1181396.jpeg?auto=compress&cs=tinysrgb&w=800',
-      isVirtual: false,
-      rsvpStatus: 'attending'
-    },
-    {
-      id: 2,
-      title: 'Alumni Networking Happy Hour',
-      description: 'Casual networking event with drinks and appetizers. Perfect for making new connections.',
-      date: '2025-02-08',
-      time: '06:00 PM',
-      location: 'The Rooftop Bar, Downtown',
-      attendees: 67,
-      maxAttendees: 100,
-      category: 'Social',
-      image: 'https://images.pexels.com/photos/1267338/pexels-photo-1267338.jpeg?auto=compress&cs=tinysrgb&w=800',
-      isVirtual: false,
-      rsvpStatus: 'maybe'
-    },
-    {
-      id: 3,
-      title: 'Virtual Career Development Workshop',
-      description: 'Learn about career advancement strategies, resume optimization, and interview techniques.',
-      date: '2025-02-12',
-      time: '02:00 PM',
-      location: 'Virtual Event',
-      attendees: 234,
-      maxAttendees: 500,
-      category: 'Professional',
-      image: 'https://images.pexels.com/photos/3182834/pexels-photo-3182834.jpeg?auto=compress&cs=tinysrgb&w=800',
-      isVirtual: true
-    },
-    {
-      id: 4,
-      title: 'Alumni Basketball Game',
-      description: 'Annual alumni basketball game followed by pizza and catch-up sessions.',
-      date: '2025-02-20',
-      time: '03:00 PM',
-      location: 'University Sports Complex',
-      attendees: 45,
-      maxAttendees: 80,
-      category: 'Sports',
-      image: 'https://images.pexels.com/photos/1752757/pexels-photo-1752757.jpeg?auto=compress&cs=tinysrgb&w=800',
-      isVirtual: false
+  const fetchEvents = async () => {
+    try {
+      const res = await fetch('http://localhost:5000/api/events');
+      const data = await res.json();
+      setEvents(data);
+    } catch (err) {
+      console.error(err);
     }
-  ];
+  };
+
+  useEffect(() => {
+    fetchEvents();
+  }, []);
+
+  const handleEventCreate = async (data: any) => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch('http://localhost:5000/api/events', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-auth-token': token || '',
+        },
+        body: JSON.stringify(data),
+      });
+      if (res.ok) {
+        fetchEvents();
+        setIsCreateModalOpen(false);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleRsvp = async (eventId: string) => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`http://localhost:5000/api/events/${eventId}/rsvp`, {
+        method: 'POST',
+        headers: {
+          'x-auth-token': token || '',
+        },
+      });
+      if (res.ok) {
+        fetchEvents();
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const upcomingEvents: Event[] = events.filter(event => new Date(event.date) >= new Date());
+  const pastEvents: Event[] = events.filter(event => new Date(event.date) < new Date());
+
+  const displayedEvents = viewMode === 'upcoming' ? upcomingEvents : pastEvents;
 
   const categories = ['All', 'Professional', 'Social', 'Sports', 'Academic'];
 
@@ -108,7 +111,7 @@ export const Events: React.FC = () => {
     }
   };
 
-  const filteredEvents = upcomingEvents.filter(event => 
+  const filteredEvents = displayedEvents.filter(event => 
     (selectedCategory === 'all' || event.category.toLowerCase() === selectedCategory.toLowerCase()) &&
     (event.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
      event.description.toLowerCase().includes(searchTerm.toLowerCase()))
@@ -116,13 +119,18 @@ export const Events: React.FC = () => {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <CreateEventModal 
+        isOpen={isCreateModalOpen} 
+        onClose={() => setIsCreateModalOpen(false)} 
+        onEventCreate={handleEventCreate} 
+      />
       <div className="mb-8">
         <div className="flex justify-between items-start">
           <div>
             <h1 className="text-3xl font-bold text-gray-900 mb-2">Alumni Events</h1>
             <p className="text-gray-600">Discover and join upcoming alumni events and activities.</p>
           </div>
-          <button className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center">
+          <button onClick={() => setIsCreateModalOpen(true)} className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center">
             <Plus className="h-4 w-4 mr-2" />
             Create Event
           </button>
@@ -189,7 +197,7 @@ export const Events: React.FC = () => {
       {/* Events Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {filteredEvents.map((event) => (
-          <div key={event.id} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-shadow duration-200">
+          <div key={event._id} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-shadow duration-200">
             <div className="relative">
               <img 
                 src={event.image} 
@@ -236,7 +244,7 @@ export const Events: React.FC = () => {
                 </div>
                 <div className="flex items-center text-sm text-gray-600">
                   <Users className="h-4 w-4 mr-2" />
-                  {event.attendees}/{event.maxAttendees} attending
+                  {event.attendees.length}/{event.maxAttendees} attending
                 </div>
               </div>
 
@@ -245,19 +253,19 @@ export const Events: React.FC = () => {
                 <div className="w-full bg-gray-200 rounded-full h-2">
                   <div 
                     className="bg-blue-600 h-2 rounded-full transition-all duration-300" 
-                    style={{ width: `${(event.attendees / event.maxAttendees) * 100}%` }}
+                    style={{ width: `${(event.attendees.length / event.maxAttendees) * 100}%` }}
                   ></div>
                 </div>
               </div>
 
               <div className="flex space-x-3">
-                <button className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
+                <button onClick={() => handleRsvp(event._id)} className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
                   {event.rsvpStatus ? 'Update RSVP' : 'RSVP'}
                 </button>
-                <button className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors flex items-center">
+                                <Link to={`/events/${event._id}`} className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors flex items-center">
                   Details
                   <ExternalLink className="h-4 w-4 ml-1" />
-                </button>
+                </Link>
               </div>
             </div>
           </div>

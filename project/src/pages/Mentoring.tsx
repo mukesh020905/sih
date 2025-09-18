@@ -10,7 +10,8 @@ import {
   Filter,
   User,
   Calendar,
-  Award
+  Award,
+  Loader
 } from 'lucide-react';
 
 interface MentorshipMatch {
@@ -31,6 +32,48 @@ interface MentorshipMatch {
 export const Mentoring: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'matches' | 'active' | 'history'>('matches');
   const [searchTerm, setSearchTerm] = useState('');
+  const [isEnrolled, setIsEnrolled] = useState(false);
+  const [isJoining, setIsJoining] = useState(false);
+  const [userProfile, setUserProfile] = useState<any>(null);
+
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (token) {
+          const res = await fetch('http://localhost:5000/api/profile/me', {
+            headers: {
+              'x-auth-token': token,
+            },
+          });
+          const data = await res.json();
+          if (res.ok) {
+            setUserProfile(data);
+            console.log('User Profile fetched:', data);
+          } else {
+            console.error('Failed to fetch user profile:', data);
+          }
+        } else {
+          console.log('No token found, user not authenticated.');
+        }
+      } catch (err) {
+        console.error('Error fetching user profile:', err);
+      }
+    };
+
+    fetchUserProfile();
+  }, []);
+
+  const handleJoinProgram = async () => {
+    setIsJoining(true);
+    console.log('Attempting to join program...');
+    // Simulate API call
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    setIsEnrolled(true);
+    setIsJoining(false);
+    console.log('isEnrolled:', isEnrolled);
+    console.log('userProfile:', userProfile);
+  };
 
   const mentorshipMatches: MentorshipMatch[] = [
     {
@@ -97,9 +140,16 @@ export const Mentoring: React.FC = () => {
             <h1 className="text-3xl font-bold text-gray-900 mb-2">Mentoring Program</h1>
             <p className="text-gray-600">Connect with mentors and mentees to grow your career and give back to the community.</p>
           </div>
-          <button className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center">
-            <Plus className="h-4 w-4 mr-2" />
-            Join Program
+                    <button 
+            onClick={handleJoinProgram}
+            disabled={isEnrolled || isJoining}
+            className={`bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center ${isEnrolled || isJoining ? 'opacity-50 cursor-not-allowed' : ''}`}>
+            {isJoining ? (
+              <Loader className="animate-spin h-4 w-4 mr-2" />
+            ) : (
+              <Plus className="h-4 w-4 mr-2" />
+            )}
+            {isEnrolled ? 'Enrolled' : 'Join Program'}
           </button>
         </div>
       </div>
@@ -219,6 +269,45 @@ export const Mentoring: React.FC = () => {
       {/* Content based on active tab */}
       {activeTab === 'matches' && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {isEnrolled && userProfile && (
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+              <div className="relative">
+                <img 
+                  src={userProfile.profilePicture ? `http://localhost:5000${userProfile.profilePicture}` : 'https://via.placeholder.com/150'} 
+                  alt={userProfile.name}
+                  className="w-full h-48 object-cover"
+                />
+                <div className="absolute top-3 left-3">
+                  <span className="px-3 py-1 rounded-full text-xs font-medium bg-green-600 text-white">
+                    You
+                  </span>
+                </div>
+              </div>
+
+              <div className="p-6">
+                <div className="mb-4">
+                  <h3 className="font-semibold text-gray-900 mb-1">{userProfile.name}</h3>
+                  <p className="text-sm text-gray-600">{userProfile.headline}</p>
+                </div>
+
+                <div className="mb-4">
+                  <p className="text-sm text-gray-700 mb-2">{userProfile.bio}</p>
+                </div>
+
+                {userProfile.skills && userProfile.skills.length > 0 && (
+                  <div className="mb-4">
+                    <div className="flex flex-wrap gap-1">
+                      {userProfile.skills.map((skill: string, index: number) => (
+                        <span key={index} className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full">
+                          {skill}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
           {mentorshipMatches.map((match) => (
             <div key={match.id} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-shadow duration-200">
               <div className="relative">
