@@ -14,19 +14,13 @@ import {
   Loader
 } from 'lucide-react';
 
-interface MentorshipMatch {
-  id: number;
+interface MentorProfile {
+  _id: string;
   name: string;
-  role: 'mentor' | 'mentee';
-  position: string;
-  company: string;
+  headline: string;
+  profilePicture: string;
+  skills: string[];
   interests: string[];
-  experience: string;
-  image: string;
-  matchScore: number;
-  availability: string;
-  sessions?: number;
-  rating?: number;
 }
 
 export const Mentoring: React.FC = () => {
@@ -34,6 +28,7 @@ export const Mentoring: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [isJoining, setIsJoining] = useState(false);
   const [userProfile, setUserProfile] = useState<any>(null);
+  const [mentors, setMentors] = useState<MentorProfile[]>([]);
 
   const isEnrolled = userProfile?.isEnrolledInMentorship;
 
@@ -62,7 +57,18 @@ export const Mentoring: React.FC = () => {
       }
     };
 
+    const fetchMentors = async () => {
+      try {
+        const res = await fetch('http://localhost:5000/api/profile?mentorship=true');
+        const data = await res.json();
+        setMentors(data);
+      } catch (err) {
+        console.error(err);
+      }
+    };
+
     fetchUserProfile();
+    fetchMentors();
   }, []);
 
   const handleToggleEnrollment = async () => {
@@ -89,63 +95,6 @@ export const Mentoring: React.FC = () => {
       setIsJoining(false);
     }
   };
-
-  const mentorshipMatches: MentorshipMatch[] = [
-    {
-      id: 1,
-      name: 'Dr. Sarah Martinez',
-      role: 'mentor',
-      position: 'VP of Engineering',
-      company: 'Tesla',
-      interests: ['Leadership', 'Career Development', 'Tech Strategy'],
-      experience: '15+ years in tech leadership',
-      image: 'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?auto=compress&cs=tinysrgb&w=400',
-      matchScore: 96,
-      availability: 'Weekends',
-      sessions: 45,
-      rating: 4.9
-    },
-    {
-      id: 2,
-      name: 'Alex Kumar',
-      role: 'mentee',
-      position: 'Computer Science Student',
-      company: 'University',
-      interests: ['Software Engineering', 'Internships', 'Career Guidance'],
-      experience: 'Final year student seeking guidance',
-      image: 'https://images.pexels.com/photos/1222271/pexels-photo-1222271.jpeg?auto=compress&cs=tinysrgb&w=400',
-      matchScore: 92,
-      availability: 'Evenings',
-    },
-    {
-      id: 3,
-      name: 'Jennifer Wu',
-      role: 'mentor',
-      position: 'Product Manager',
-      company: 'Spotify',
-      interests: ['Product Strategy', 'User Research', 'Career Transition'],
-      experience: '10+ years in product management',
-      image: 'https://images.pexels.com/photos/774909/pexels-photo-774909.jpeg?auto=compress&cs=tinysrgb&w=400',
-      matchScore: 89,
-      availability: 'Flexible',
-      sessions: 32,
-      rating: 4.8
-    }
-  ];
-
-  const activeMentorships = [
-    {
-      id: 1,
-      name: 'Emma Thompson',
-      role: 'mentee' as const,
-      position: 'Junior Developer',
-      company: 'StartupXYZ',
-      startDate: '2024-12-01',
-      nextSession: '2025-01-15',
-      progress: 75,
-      image: 'https://images.pexels.com/photos/1181686/pexels-photo-1181686.jpeg?auto=compress&cs=tinysrgb&w=400',
-    }
-  ];
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -175,7 +124,7 @@ export const Mentoring: React.FC = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600">Active Mentors</p>
-              <p className="text-2xl font-bold text-gray-900">1,247</p>
+              <p className="text-2xl font-bold text-gray-900">{mentors.length}</p>
             </div>
             <div className="p-3 bg-blue-50 rounded-lg">
               <Users className="h-6 w-6 text-blue-600" />
@@ -230,7 +179,7 @@ export const Mentoring: React.FC = () => {
               : 'text-gray-600 hover:text-gray-900'
           }`}
         >
-          AI Matches
+          Mentors
         </button>
         <button
           onClick={() => setActiveTab('active')}
@@ -262,7 +211,7 @@ export const Mentoring: React.FC = () => {
               <Search className="h-5 w-5 absolute left-3 top-3 text-gray-400" />
               <input
                 type="text"
-                placeholder="Search mentors or mentees..."
+                placeholder="Search mentors..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -271,10 +220,9 @@ export const Mentoring: React.FC = () => {
             <div className="flex items-center space-x-2">
               <Filter className="h-5 w-5 text-gray-400" />
               <select className="border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                <option>All Matches</option>
-                <option>Mentors Only</option>
-                <option>Mentees Only</option>
-                <option>High Match Score</option>
+                <option>All Mentors</option>
+                <option>Skills</option>
+                <option>Interests</option>
               </select>
             </div>
           </div>
@@ -284,89 +232,40 @@ export const Mentoring: React.FC = () => {
       {/* Content based on active tab */}
       {activeTab === 'matches' && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {isEnrolled && userProfile && (
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+          {mentors.map((mentor) => (
+            <div key={mentor._id} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-shadow duration-200">
               <div className="relative">
                 <img 
-                  src={userProfile.profilePicture ? `http://localhost:5000${userProfile.profilePicture}` : 'https://via.placeholder.com/150'} 
-                  alt={userProfile.name}
+                  src={mentor.profilePicture ? `http://localhost:5000${mentor.profilePicture}` : 'https://images.pexels.com/photos/774909/pexels-photo-774909.jpeg?auto=compress&cs=tinysrgb&w=400'} 
+                  alt={mentor.name}
                   className="w-full h-48 object-cover"
                 />
                 <div className="absolute top-3 left-3">
-                  <span className="px-3 py-1 rounded-full text-xs font-medium bg-green-600 text-white">
-                    You
+                  <span className="px-3 py-1 rounded-full text-xs font-medium bg-blue-600 text-white">
+                    Mentor
                   </span>
                 </div>
               </div>
 
               <div className="p-6">
                 <div className="mb-4">
-                  <h3 className="font-semibold text-gray-900 mb-1">{userProfile.name}</h3>
-                  <p className="text-sm text-gray-600">{userProfile.headline}</p>
-                </div>
-
-                <div className="mb-4">
-                  <p className="text-sm text-gray-700 mb-2">{userProfile.bio}</p>
-                </div>
-
-                {userProfile.skills && userProfile.skills.length > 0 && (
-                  <div className="mb-4">
-                    <div className="flex flex-wrap gap-1">
-                      {userProfile.skills.map((skill: string, index: number) => (
-                        <span key={index} className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full">
-                          {skill}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-          {mentorshipMatches.map((match) => (
-            <div key={match.id} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-shadow duration-200">
-              <div className="relative">
-                <img 
-                  src={match.image} 
-                  alt={match.name}
-                  className="w-full h-48 object-cover"
-                />
-                <div className="absolute top-3 right-3 bg-green-500 text-white px-2 py-1 rounded-full text-xs font-medium">
-                  {match.matchScore}% Match
-                </div>
-                <div className="absolute top-3 left-3">
-                  <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                    match.role === 'mentor' ? 'bg-blue-600 text-white' : 'bg-purple-600 text-white'
-                  }`}>
-                    {match.role === 'mentor' ? 'Mentor' : 'Mentee'}
-                  </span>
-                </div>
-              </div>
-
-              <div className="p-6">
-                <div className="mb-4">
-                  <h3 className="font-semibold text-gray-900 mb-1">{match.name}</h3>
-                  <p className="text-sm text-gray-600">{match.position}</p>
-                  <p className="text-sm text-gray-600">{match.company}</p>
-                </div>
-
-                <div className="mb-4">
-                  <p className="text-sm text-gray-700 mb-2">{match.experience}</p>
-                  <div className="flex items-center text-sm text-gray-600 mb-2">
-                    <Clock className="h-4 w-4 mr-1" />
-                    Available: {match.availability}
-                  </div>
-                  {match.rating && (
-                    <div className="flex items-center text-sm text-gray-600">
-                      <Star className="h-4 w-4 mr-1 text-yellow-500 fill-current" />
-                      {match.rating} ({match.sessions} sessions)
-                    </div>
-                  )}
+                  <h3 className="font-semibold text-gray-900 mb-1">{mentor.name}</h3>
+                  <p className="text-sm text-gray-600">{mentor.headline}</p>
                 </div>
 
                 <div className="mb-4">
                   <div className="flex flex-wrap gap-1">
-                    {match.interests.map((interest, index) => (
+                    {mentor.skills.map((skill, index) => (
+                      <span key={index} className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full">
+                        {skill}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="mb-4">
+                  <div className="flex flex-wrap gap-1">
+                    {mentor.interests.map((interest, index) => (
                       <span key={index} className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full">
                         {interest}
                       </span>
@@ -389,54 +288,10 @@ export const Mentoring: React.FC = () => {
       )}
 
       {activeTab === 'active' && (
-        <div className="space-y-6">
-          {activeMentorships.map((mentorship) => (
-            <div key={mentorship.id} className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex items-center space-x-4">
-                  <img 
-                    src={mentorship.image} 
-                    alt={mentorship.name}
-                    className="w-16 h-16 rounded-full object-cover"
-                  />
-                  <div>
-                    <h3 className="font-semibold text-gray-900">{mentorship.name}</h3>
-                    <p className="text-sm text-gray-600">{mentorship.position}</p>
-                    <p className="text-sm text-gray-600">{mentorship.company}</p>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <p className="text-sm text-gray-600">Started: {new Date(mentorship.startDate).toLocaleDateString()}</p>
-                  <p className="text-sm text-gray-600">Next Session: {new Date(mentorship.nextSession).toLocaleDateString()}</p>
-                </div>
-              </div>
-
-              <div className="mb-4">
-                <div className="flex justify-between items-center mb-2">
-                  <span className="text-sm font-medium text-gray-700">Progress</span>
-                  <span className="text-sm text-gray-600">{mentorship.progress}%</span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div 
-                    className="bg-green-600 h-2 rounded-full transition-all duration-300" 
-                    style={{ width: `${mentorship.progress}%` }}
-                  ></div>
-                </div>
-              </div>
-
-              <div className="flex space-x-3">
-                <button className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
-                  Schedule Session
-                </button>
-                <button className="border border-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors">
-                  View Details
-                </button>
-                <button className="border border-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors">
-                  <MessageCircle className="h-4 w-4" />
-                </button>
-              </div>
-            </div>
-          ))}
+        <div className="text-center py-12">
+          <User className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-gray-900 mb-2">No active mentorships yet</h3>
+          <p className="text-gray-600">Your active mentorships will appear here.</p>
         </div>
       )}
 

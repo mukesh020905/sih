@@ -4,11 +4,44 @@ const auth = require('../middleware/auth');
 const Event = require('../models/Event');
 const User = require('../models/User');
 const sendEmail = require('../utils/sendEmail');
+const multer = require('multer');
+const path = require('path');
+
+// Multer config
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, 'uploads/');
+  },
+  filename: function (req, file, cb) {
+    cb(null, file.fieldname + '-' + Date.now() + path.extname(file.originalname));
+  },
+});
+
+const upload = multer({ 
+  storage: storage,
+  fileFilter: function (req, file, cb) {
+    const filetypes = /jpeg|jpg|png|gif/;
+    const mimetype = filetypes.test(file.mimetype);
+    const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
+    if (mimetype && extname) {
+      return cb(null, true);
+    }
+    cb('Error: File upload only supports the following filetypes - ' + filetypes);
+  }
+});
+
+// @route   POST api/events/upload
+// @desc    Upload an image
+// @access  Private
+router.post('/upload', auth, upload.single('image'), (req, res) => {
+  res.send(`http://localhost:5000/${req.file.path.replace(/\\/g, '/')}`);
+});
 
 // @route   POST api/events
 // @desc    Create an event
 // @access  Private
 router.post('/', auth, async (req, res) => {
+  console.log('Received request to create event with body:', req.body);
   const {
     title,
     description,
@@ -38,9 +71,10 @@ router.post('/', auth, async (req, res) => {
     });
 
     const event = await newEvent.save();
+    console.log('Saved event:', event);
     res.json(event);
   } catch (err) {
-    console.error(err.message);
+    console.error('Error creating event:', err.message);
     res.status(500).send('Server Error');
   }
 });
@@ -122,4 +156,80 @@ router.post('/:id/rsvp', auth, async (req, res) => {
 });
 
 module.exports = router;
+
+// @route   PUT api/events/:id
+// @desc    Update an event
+// @access  Private
+router.put('/:id', auth, async (req, res) => {
+  const {
+    title,
+    description,
+    date,
+    time,
+    location,
+    maxAttendees,
+    category,
+    image,
+    isVirtual,
+    rsvp,
+  } = req.body;
+
+  // Build event object
+  const eventFields = {};
+  if (title) eventFields.title = title;
+  if (description) eventFields.description = description;
+  if (date) eventFields.date = date;
+  if (time) eventFields.time = time;
+  if (location) eventFields.location = location;
+  if (maxAttendees) eventFields.maxAttendees = maxAttendees;
+  if (category) eventFields.category = category;
+  if (image) eventFields.image = image;
+  if (isVirtual) eventFields.isVirtual = isVirtual;
+  if (rsvp) eventFields.rsvp = rsvp;
+
+  try {
+    let event = await Event.findById(req.params.id);
+
+    if (!event) return res.status(404).json({ msg: 'Event not found' });
+
+    // Make sure user owns event
+    if (event.createdBy.toString() !== req.user.id) {
+      return res.status(401).json({ msg: 'Not authorized' });
+    }
+
+    event = await Event.findByIdAndUpdate(
+      req.params.id,
+      { $set: eventFields },
+      { new: true }
+    );
+
+    res.json(event);
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Server Error');
+  }
+});
+
+// @route   DELETE api/events/:id
+// @desc    Delete an event
+// @access  Private
+router.delete('/:id', auth, async (req, res) => {
+  try {
+    let event = await Event.findById(req.params.id);
+
+    if (!event) return res.status(404).json({ msg: 'Event not found' });
+
+    // Make sure user owns event
+    if (event.createdBy.toString() !== req.user.id) {
+      return res.status(401).json({ msg: 'Not authorized' });
+    }
+
+    await Event.findByIdAndRemove(req.params.id);
+
+    res.json({ msg: 'Event removed' });
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Server Error');
+  }
+});
 

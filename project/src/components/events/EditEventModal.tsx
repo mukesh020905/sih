@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { X } from 'lucide-react';
 import axios from 'axios';
 
-interface CreateEventForm {
+interface EditEventForm {
   title: string;
   description: string;
   date: string;
@@ -16,16 +16,32 @@ interface CreateEventForm {
   rsvp: boolean;
 }
 
-interface CreateEventModalProps {
+interface EditEventModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onEventCreate: (data: CreateEventForm) => void;
+  onEventUpdate: (data: EditEventForm) => void;
+  event: any;
 }
 
-export const CreateEventModal: React.FC<CreateEventModalProps> = ({ isOpen, onClose, onEventCreate }) => {
-  const { register, handleSubmit, formState: { errors } } = useForm<CreateEventForm>();
+export const EditEventModal: React.FC<EditEventModalProps> = ({ isOpen, onClose, onEventUpdate, event }) => {
+  const { register, handleSubmit, formState: { errors }, setValue } = useForm<EditEventForm>();
   const [imageUpload, setImageUpload] = useState(false);
   const [imageFile, setImageFile] = useState<File | null>(null);
+
+  useEffect(() => {
+    if (event) {
+      setValue('title', event.title);
+      setValue('description', event.description);
+      setValue('date', new Date(event.date).toISOString().split('T')[0]);
+      setValue('time', event.time);
+      setValue('location', event.location);
+      setValue('maxAttendees', event.maxAttendees);
+      setValue('category', event.category);
+      setValue('image', event.image);
+      setValue('isVirtual', event.isVirtual);
+      setValue('rsvp', event.rsvp);
+    }
+  }, [event, setValue]);
 
   if (!isOpen) return null;
 
@@ -35,7 +51,7 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({ isOpen, onCl
     }
   };
 
-  const onSubmit = async (data: CreateEventForm) => {
+  const onSubmit = async (data: EditEventForm) => {
     let imageUrl = data.image;
     if (imageUpload && imageFile) {
       const formData = new FormData();
@@ -52,24 +68,23 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({ isOpen, onCl
         imageUrl = res.data;
       } catch (err) {
         console.error('Error uploading image:', err);
-        // Handle image upload error (e.g., show a message to the user)
         return;
       }
     }
 
-    onEventCreate({ ...data, image: imageUrl });
+    onEventUpdate({ ...data, image: imageUrl });
   };
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg shadow-xl p-8 w-full max-w-2xl">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-bold text-gray-900">Create New Event</h2>
-          <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
-            <X className="h-6 w-6" />
-          </button>
-        </div>
         <div className="max-h-[80vh] overflow-y-auto pr-4">
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-2xl font-bold text-gray-900">Edit Event</h2>
+            <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
+              <X className="h-6 w-6" />
+            </button>
+          </div>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 pb-8">
             <div>
               <label htmlFor="title" className="block text-sm font-medium text-gray-700">Event Title</label>
@@ -229,7 +244,7 @@ export const CreateEventModal: React.FC<CreateEventModalProps> = ({ isOpen, onCl
                 Cancel
               </button>
               <button type="submit" className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-                Create Event
+                Update Event
               </button>
             </div>
           </form>

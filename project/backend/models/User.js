@@ -86,6 +86,46 @@ const UserSchema = new mongoose.Schema({
     type: Boolean,
     default: false,
   },
+  role: {
+    type: String,
+    enum: ['Alumni', 'Student', 'Faculty'],
+  },
+  sentRequests: [
+    {
+      user: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+      },
+      date: {
+        type: Date,
+        default: Date.now,
+      },
+    },
+  ],
+  receivedRequests: [
+    {
+      user: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+      },
+      date: {
+        type: Date,
+        default: Date.now,
+      },
+    },
+  ],
+  connections: [
+    {
+      user: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+      },
+      date: {
+        type: Date,
+        default: Date.now,
+      },
+    },
+  ],
 });
 
 module.exports = mongoose.model('User', UserSchema);

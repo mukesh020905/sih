@@ -7,10 +7,13 @@ import {
   Search,
   Filter,
   Plus,
-  ExternalLink
+  ExternalLink,
+  Edit,
+  Trash
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { CreateEventModal } from '../components/events/CreateEventModal';
+import { EditEventModal } from '../components/events/EditEventModal';
 
 interface Event {
   _id: string;
@@ -24,6 +27,7 @@ interface Event {
   category: string;
   image: string;
   isVirtual: boolean;
+  createdBy: string;
   rsvpStatus?: 'attending' | 'not-attending' | 'maybe';
 }
 
@@ -33,6 +37,23 @@ export const Events: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [viewMode, setViewMode] = useState<'upcoming' | 'past'>('upcoming');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
+
+  const getUserId = () => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        return payload.user.id;
+      } catch (error) {
+        return null;
+      }
+    }
+    return null;
+  };
+
+  const userId = getUserId();
 
   const fetchEvents = async () => {
     try {
@@ -49,8 +70,10 @@ export const Events: React.FC = () => {
   }, []);
 
   const handleEventCreate = async (data: any) => {
+    console.log('Creating event with data:', data);
     try {
       const token = localStorage.getItem('token');
+      console.log('Using token:', token);
       const res = await fetch('http://localhost:5000/api/events', {
         method: 'POST',
         headers: {
@@ -59,12 +82,54 @@ export const Events: React.FC = () => {
         },
         body: JSON.stringify(data),
       });
+      console.log('Create event response:', res);
       if (res.ok) {
         fetchEvents();
         setIsCreateModalOpen(false);
       }
     } catch (err) {
+      console.error('Error creating event:', err);
+    }
+  };
+
+  const handleEventUpdate = async (data: any) => {
+    if (!selectedEvent) return;
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`http://localhost:5000/api/events/${selectedEvent._id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-auth-token': token || '',
+        },
+        body: JSON.stringify(data),
+      });
+      if (res.ok) {
+        fetchEvents();
+        setIsEditModalOpen(false);
+        setSelectedEvent(null);
+      }
+    } catch (err) {
       console.error(err);
+    }
+  };
+
+  const handleEventDelete = async (eventId: string) => {
+    if (window.confirm('Are you sure you want to delete this event?')) {
+      try {
+        const token = localStorage.getItem('token');
+        const res = await fetch(`http://localhost:5000/api/events/${eventId}`, {
+          method: 'DELETE',
+          headers: {
+            'x-auth-token': token || '',
+          },
+        });
+        if (res.ok) {
+          fetchEvents();
+        }
+      } catch (err) {
+        console.error(err);
+      }
     }
   };
 
@@ -94,11 +159,11 @@ export const Events: React.FC = () => {
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { 
-      weekday: 'long', 
-      year: 'numeric', 
-      month: 'long', 
-      day: 'numeric' 
+    return date.toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
     });
   };
 
@@ -111,19 +176,33 @@ export const Events: React.FC = () => {
     }
   };
 
-  const filteredEvents = displayedEvents.filter(event => 
+  const filteredEvents = displayedEvents.filter(event =>
     (selectedCategory === 'all' || event.category.toLowerCase() === selectedCategory.toLowerCase()) &&
     (event.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
      event.description.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
+  console.log('Filtered events:', filteredEvents);
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <CreateEventModal 
-        isOpen={isCreateModalOpen} 
-        onClose={() => setIsCreateModalOpen(false)} 
-        onEventCreate={handleEventCreate} 
+      <CreateEventModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        onEventCreate={handleEventCreate}
       />
+      {selectedEvent && (
+        <EditEventModal
+          isOpen={isEditModalOpen}
+          onClose={() => {
+            setIsEditModalOpen(false);
+            setSelectedEvent(null);
+          }}
+          onEventUpdate={handleEventUpdate}
+          event={selectedEvent}
+        />
+      )}
+
       <div className="mb-8">
         <div className="flex justify-between items-start">
           <div>
@@ -136,7 +215,6 @@ export const Events: React.FC = () => {
           </button>
         </div>
       </div>
-
       {/* Controls */}
       <div className="mb-8">
         <div className="flex flex-col lg:flex-row space-y-4 lg:space-y-0 lg:space-x-4 mb-6">
@@ -262,10 +340,25 @@ export const Events: React.FC = () => {
                 <button onClick={() => handleRsvp(event._id)} className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
                   {event.rsvpStatus ? 'Update RSVP' : 'RSVP'}
                 </button>
-                                <Link to={`/events/${event._id}`} className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors flex items-center">
+                <Link to={`/events/${event._id}`} className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors flex items-center">
                   Details
                   <ExternalLink className="h-4 w-4 ml-1" />
                 </Link>
+                {userId === event.createdBy && (
+                  <>
+                    <button onClick={() => {
+                      setSelectedEvent(event);
+                      setIsEditModalOpen(true);
+                    }} className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors flex items-center">
+                      <Edit className="h-4 w-4 mr-1" />
+                      Edit
+                    </button>
+                    <button onClick={() => handleEventDelete(event._id)} className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors flex items-center">
+                      <Trash className="h-4 w-4 mr-1" />
+                      Delete
+                    </button>
+                  </>
+                )}
               </div>
             </div>
           </div>

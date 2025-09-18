@@ -32,6 +32,8 @@ app.use('/api/profile', require('./routes/profile'));
 
 // Event routes
 app.use('/api/events', require('./routes/events'));
+// Chat routes
+app.use('/api/chat', require('./routes/chat'));
 
 const PORT = process.env.PORT || 5000;
 

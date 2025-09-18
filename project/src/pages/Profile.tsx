@@ -62,6 +62,7 @@ interface ProfileData {
   projects?: string; // JSON string for editing
   certifications?: string; // Comma-separated string for editing
   interests?: string; // Comma-separated string for editing
+  role?: string;
 }
 
 interface UserProfile {
@@ -82,6 +83,7 @@ interface UserProfile {
   projects?: Project[];
   certifications?: string[];
   interests?: string[];
+  role?: string;
 }
 
 export const Profile: React.FC = () => {
@@ -129,6 +131,7 @@ export const Profile: React.FC = () => {
           projects: data.projects ? data.projects.map(proj => proj.title).join('\n') : '',
           certifications: data.certifications ? data.certifications.join(', ') : '',
           interests: data.interests ? data.interests.join(', ') : '',
+          role: data.role || '',
         });
       } else {
         setError(data.msg || 'Failed to fetch profile');
@@ -196,6 +199,7 @@ export const Profile: React.FC = () => {
   };
 
   const onSubmit = async (data: ProfileData) => {
+    console.log('Submitting profile data:', data);
     setLoading(true);
     setError(null);
     try {
@@ -219,7 +223,7 @@ export const Profile: React.FC = () => {
       const responseData = await res.json();
 
       if (res.ok) {
-        console.log('Profile updated:', responseData);
+        console.log('Profile updated successfully:', responseData);
         setUserProfile(responseData);
         setIsEditing(false);
       } else {
@@ -365,6 +369,7 @@ export const Profile: React.FC = () => {
                         projects: userProfile.projects ? userProfile.projects.map(proj => proj.title).join('\n') : '',
                         certifications: userProfile.certifications ? userProfile.certifications.join(', ') : '',
                         interests: userProfile.interests ? userProfile.interests.join(', ') : '',
+                        role: userProfile.role || '',
                       });
                       setProfilePictureFile(null);
                     }}
@@ -730,6 +735,29 @@ export const Profile: React.FC = () => {
             <div>
               <h2 className="text-xl font-semibold text-gray-900 mb-4">Other Information</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Role
+                  </label>
+                  {isEditing ? (
+                    <select
+                      {...register('role')}
+                      defaultValue={userProfile.role || ''}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    >
+                      <option value="">Select Role</option>
+                      <option value="Alumni">Alumni</option>
+                      <option value="Student">Student</option>
+                      <option value="Faculty">Faculty</option>
+                    </select>
+                  ) : (
+                    <p className="text-gray-900">{userProfile.role}</p>
+                  )}
+                  {errors.role && (
+                    <p className="mt-1 text-sm text-red-600">{errors.role.message}</p>
+                  )}
+                </div>
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Member Since
