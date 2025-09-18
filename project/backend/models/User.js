@@ -82,6 +82,10 @@ const UserSchema = new mongoose.Schema({
     type: Date,
     default: Date.now,
   },
+  isEnrolledInMentorship: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 module.exports = mongoose.model('User', UserSchema);

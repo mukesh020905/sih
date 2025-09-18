@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Heart, 
   Users, 
@@ -32,9 +32,10 @@ interface MentorshipMatch {
 export const Mentoring: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'matches' | 'active' | 'history'>('matches');
   const [searchTerm, setSearchTerm] = useState('');
-  const [isEnrolled, setIsEnrolled] = useState(false);
   const [isJoining, setIsJoining] = useState(false);
   const [userProfile, setUserProfile] = useState<any>(null);
+
+  const isEnrolled = userProfile?.isEnrolledInMentorship;
 
   useEffect(() => {
     const fetchUserProfile = async () => {
@@ -64,15 +65,29 @@ export const Mentoring: React.FC = () => {
     fetchUserProfile();
   }, []);
 
-  const handleJoinProgram = async () => {
+  const handleToggleEnrollment = async () => {
     setIsJoining(true);
-    console.log('Attempting to join program...');
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    setIsEnrolled(true);
-    setIsJoining(false);
-    console.log('isEnrolled:', isEnrolled);
-    console.log('userProfile:', userProfile);
+    try {
+      const token = localStorage.getItem('token');
+      if (token) {
+        const res = await fetch('http://localhost:5000/api/profile/mentorship', {
+          method: 'PUT',
+          headers: {
+            'x-auth-token': token,
+          },
+        });
+        const data = await res.json();
+        if (res.ok) {
+          setUserProfile(data);
+        } else {
+          console.error('Failed to update enrollment status:', data);
+        }
+      }
+    } catch (err) {
+      console.error('Error updating enrollment status:', err);
+    } finally {
+      setIsJoining(false);
+    }
   };
 
   const mentorshipMatches: MentorshipMatch[] = [
@@ -140,16 +155,16 @@ export const Mentoring: React.FC = () => {
             <h1 className="text-3xl font-bold text-gray-900 mb-2">Mentoring Program</h1>
             <p className="text-gray-600">Connect with mentors and mentees to grow your career and give back to the community.</p>
           </div>
-                    <button 
-            onClick={handleJoinProgram}
-            disabled={isEnrolled || isJoining}
-            className={`bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center ${isEnrolled || isJoining ? 'opacity-50 cursor-not-allowed' : ''}`}>
+          <button
+            onClick={handleToggleEnrollment}
+            disabled={isJoining}
+            className={`bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center ${isJoining ? 'opacity-50 cursor-not-allowed' : ''}`}>
             {isJoining ? (
               <Loader className="animate-spin h-4 w-4 mr-2" />
             ) : (
               <Plus className="h-4 w-4 mr-2" />
             )}
-            {isEnrolled ? 'Enrolled' : 'Join Program'}
+            {isEnrolled ? 'Unenroll' : 'Join Program'}
           </button>
         </div>
       </div>

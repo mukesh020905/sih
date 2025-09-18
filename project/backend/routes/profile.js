@@ -151,4 +151,24 @@ router.post('/picture', auth, upload.single('profilePicture'), async (req, res) 
   }
 });
 
+// @route   PUT api/profile/mentorship
+// @desc    Update mentorship enrollment status
+// @access  Private
+router.put('/mentorship', auth, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ msg: 'User not found' });
+    }
+
+    user.isEnrolledInMentorship = !user.isEnrolledInMentorship;
+    await user.save();
+
+    res.json(user);
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Server Error');
+  }
+});
+
 module.exports = router;
