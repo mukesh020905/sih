@@ -79,6 +79,7 @@ export const Mentoring: React.FC = () => {
         const res = await fetch('http://localhost:5000/api/profile/mentorship', {
           method: 'PUT',
           headers: {
+            'Content-Type': 'application/json',
             'x-auth-token': token,
           },
         });

@@ -4,7 +4,7 @@ const dotenv = require('dotenv');
 const cors = require('cors');
 const path = require('path');
 
-dotenv.config();
+dotenv.config({ path: path.resolve(__dirname, '.env') });
 
 const app = express();
 
@@ -34,6 +34,14 @@ app.use('/api/profile', require('./routes/profile'));
 app.use('/api/events', require('./routes/events'));
 // Chat routes
 app.use('/api/chat', require('./routes/chat'));
+
+// Payment routes
+app.use('/api/payment', require('./routes/payment'));
+
+// Project routes
+app.use('/api/projects', require('./routes/projects'));
+
+
 
 const PORT = process.env.PORT || 5000;
 

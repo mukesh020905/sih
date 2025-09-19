@@ -79,7 +79,10 @@ router.put('/', auth, async (req, res) => {
   if (headline !== undefined) profileFields.headline = headline;
   if (bio !== undefined) profileFields.bio = bio;
   if (website !== undefined) profileFields.website = website;
-  if (linkedin !== undefined) profileFields.linkedin = linkedin;
+  if (linkedin !== undefined) {
+    // Prepend https://www.linkedin.com/in/ if it's not already a full URL
+    profileFields.linkedin = linkedin.startsWith('http') ? linkedin : `https://www.linkedin.com/in/${linkedin}`;
+  }
   if (github !== undefined) profileFields.github = github;
   if (twitter !== undefined) profileFields.twitter = twitter;
   if (role !== undefined) profileFields.role = role;
@@ -273,6 +276,17 @@ router.put('/accept/:id', auth, async (req, res) => {
     requester.connections.unshift({ user: req.user.id });
     await requester.save();
 
+    // Send email notification to the requester
+    try {
+      await sendEmail({
+        email: requester.email,
+        subject: 'Connection Request Accepted',
+        message: `${currentUser.name} has accepted your connection request. You are now connected!`,
+      });
+    } catch (emailErr) {
+      console.error('Error sending email:', emailErr);
+    }
+
     res.json({ msg: 'Connection accepted' });
   } catch (err) {
     console.error(err.message);
@@ -309,6 +323,17 @@ router.delete('/reject/:id', auth, async (req, res) => {
     );
     await requester.save();
 
+    // Send email notification to the requester
+    try {
+      await sendEmail({
+        email: requester.email,
+        subject: 'Connection Request Rejected',
+        message: `${currentUser.name} has rejected your connection request.`,
+      });
+    } catch (emailErr) {
+      console.error('Error sending email:', emailErr);
+    }
+
     res.json({ msg: 'Connection request rejected' });
   } catch (err) {
     console.error(err.message);
@@ -328,7 +353,7 @@ router.get('/', async (req, res) => {
     if (req.query.role) {
       query.role = req.query.role;
     }
-    const profiles = await User.find(query).select('name profilePicture headline skills interests role');
+    const profiles = await User.find(query).select('name profilePicture headline skills interests role email linkedin');
     res.json(profiles);
   } catch (err) {
     console.error(err.message);
